@@ -134,8 +134,10 @@ class Exp_Informer(Exp_Basic):
 
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             # 增加代码同上时间
-            print("loss:{0}".format(loss), file=log)
+            print("iters,{0},loss,{1:.7f}".format(i+1,loss), file=log)
             total_loss.append(loss)
+        # 增加代码  23/4/25
+        print("test end",file=log)
 
         # 23/4/25增加代码同上时间
         preds_vali = np.array(preds_vali)
@@ -235,8 +237,8 @@ class Exp_Informer(Exp_Basic):
 
             # 完成每个epoch的训练就打印一次
             # 增加代码
-            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
-                epoch + 1, train_steps, train_loss, vali_loss, test_loss),file=log)
+            print("Epoch: {0},  Train Loss, {1:.7f}, Vali Loss, {2:.7f}, Test Loss, {3:.7f}".format(
+                epoch + 1, train_loss, vali_loss, test_loss),file=log)
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
             early_stopping(vali_loss, self.model, path)
