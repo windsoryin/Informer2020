@@ -177,7 +177,7 @@ class Exp_Informer(Exp_Basic):
         early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
         
         model_optim = self._select_optimizer()
-        criterion =  self._select_criterion()
+        criterion = self._select_criterion()
 
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
@@ -227,8 +227,8 @@ class Exp_Informer(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
             train_loss = np.average(train_loss)
-            vali_loss = self.vali(vali_data, vali_loader, criterion)
-            test_loss = self.vali(test_data, test_loader, criterion)
+            vali_loss = self.vali(setting,vali_data, vali_loader, criterion)
+            test_loss = self.vali(setting,test_data, test_loader, criterion)
 
             # 添加代码23/4/25 添加到列表中留存，其中round()表示四舍五入
             all_epoch_train_loss.append(float(round(train_loss, 3)))
