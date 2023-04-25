@@ -117,17 +117,44 @@ class Exp_Informer(Exp_Basic):
 
     def vali(self, vali_data, vali_loader, criterion):
         self.model.eval()
+
+        # 增加代码 23/4/25 yc
+        preds_vali=[]
+        trues_vali=[]
+
         total_loss = []
         # 23/4/25 16:13增加代码
         log = open(fr'total_loss.csv', mode="a+", encoding="utf-8")  # 增加代码
         for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(vali_loader):
             pred, true = self._process_one_batch(
                 vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+            # 增加代码 23/4/25
+            preds_vali.append(pred.detach().cpu().numpy())
+            trues_vali.append(true.detach().cpu().numpy())
+
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             # 增加代码同上时间
             print("loss:{0}".format(loss), file=log)
             total_loss.append(loss)
-        # 增加代码同上时间
+
+        # 23/4/25增加代码同上时间
+        preds_vali = np.array(preds_vali)
+        trues_vali = np.array(trues_vali)
+        print('test shape:', preds_vali.shape, trues_vali.shape)
+        preds_vali = preds_vali.reshape(-1, preds_vali.shape[-2], preds_vali.shape[-1])
+        trues_vali = trues_vali.reshape(-1, trues_vali.shape[-2], trues_vali.shape[-1])
+        print('test shape:', preds_vali.shape, trues_vali.shape)
+
+        folder_path = './vali_results/' + setting +'/'
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        mae, mse, rmse, mape, mspe = metric(preds_vali, trues_vali)
+
+        np.save(folder_path+'vali_metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
+        np.save(folder_path+'vali_pred.npy', preds_vali)
+        np.save(folder_path+'vali_true.npy', trues_vali)
+
         log.close()
         total_loss = np.average(total_loss)
         self.model.train()
