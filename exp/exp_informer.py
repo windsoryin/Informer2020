@@ -17,7 +17,7 @@ import time
 
 import warnings
 warnings.filterwarnings('ignore')
-#ccccc
+#cc
 class Exp_Informer(Exp_Basic):
     def __init__(self, args):
         super(Exp_Informer, self).__init__(args)
