@@ -70,6 +70,11 @@ class Exp_Informer(Exp_Basic):
             'Solar':Dataset_Custom,
             'custom':Dataset_Custom,
         }
+
+        # 增加代码：23/4/25 yc 如果数据不存在于data_dict中，则往其中添加
+        if args.data not in data_dict.keys():
+            data_dict.update({args.data: "Dataset_Custom"})
+
         Data = data_dict[self.args.data]
         timeenc = 0 if args.embed!='timeF' else 1
 
@@ -113,11 +118,17 @@ class Exp_Informer(Exp_Basic):
     def vali(self, vali_data, vali_loader, criterion):
         self.model.eval()
         total_loss = []
+        # 23/4/25 16:13增加代码
+        log = open(fr'total_loss.csv', mode="a+", encoding="utf-8")  # 增加代码
         for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(vali_loader):
             pred, true = self._process_one_batch(
                 vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
+            # 增加代码同上时间
+            print("loss:{0}".format(loss), file=log)
             total_loss.append(loss)
+        # 增加代码同上时间
+        log.close()
         total_loss = np.average(total_loss)
         self.model.train()
         return total_loss
@@ -142,6 +153,18 @@ class Exp_Informer(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        # 增加代码
+        # 训练的时候记录每个epoch产生的损失，包括训练集损失、验证集损失、测试集(评估集)损失
+        all_epoch_train_loss = []
+        all_epoch_vali_loss = []
+        all_epoch_test_loss = []
+
+        # 增加代码
+        # 训练args.train_epochs个epoch，每一个epoch循环一遍整个数据集
+        epoch_count = 0
+
+        # 增加代码
+        log = open(fr'evry_loss.csv',mode="a+",encoding="utf-8")
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -178,6 +201,15 @@ class Exp_Informer(Exp_Basic):
             vali_loss = self.vali(vali_data, vali_loader, criterion)
             test_loss = self.vali(test_data, test_loader, criterion)
 
+            # 添加代码23/4/25 添加到列表中留存，其中round()表示四舍五入
+            all_epoch_train_loss.append(float(round(train_loss, 3)))
+            all_epoch_vali_loss.append(float(round(vali_loss, 3)))
+            all_epoch_test_loss.append(float(round(test_loss, 3)))
+
+            # 完成每个epoch的训练就打印一次
+            # 增加代码
+            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
+                epoch + 1, train_steps, train_loss, vali_loss, test_loss),file=log)
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
             early_stopping(vali_loss, self.model, path)
@@ -186,7 +218,8 @@ class Exp_Informer(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, epoch+1, self.args)
-            
+        # 增加代码23/4/25
+        log.close()
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         
