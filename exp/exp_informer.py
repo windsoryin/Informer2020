@@ -115,7 +115,7 @@ class Exp_Informer(Exp_Basic):
         criterion =  nn.MSELoss()
         return criterion
 
-    def vali(self, vali_data, vali_loader, criterion):
+    def vali(self, setting, vali_data, vali_loader, criterion):
         self.model.eval()
 
         # 增加代码 23/4/25 yc
