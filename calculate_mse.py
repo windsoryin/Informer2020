@@ -21,15 +21,13 @@ print("------------------------------------------")
 
 
 for i in range(trues.shape[0]):
-    for j in range(trues.shape[1]):
-        for k in range(trues.shape[2]):
-            if trues[i][j][k] < 0.1:
-                trues[i][j][k] = 0
-                preds[i][j][k] = 0
+    tmp = trues[i, :, :]
+    if all(itr < 0.1 for itr in map):
+        trues[i, :, :] = -9999
 
-new_trues = trues[trues != 0]
+new_trues = trues[trues != -9999]
 new_trues = new_trues.reshape(-1, 24, 1)
-new_preds = preds[preds != 0]
+new_preds = preds[preds != -9999]
 new_preds = new_preds.reshape(-1, 24, 1)
 
 true_length=len(new_trues)
