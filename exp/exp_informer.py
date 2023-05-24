@@ -18,6 +18,7 @@ import time
 import warnings
 warnings.filterwarnings('ignore')
 
+
 class Exp_Informer(Exp_Basic):
     def __init__(self, args):
         super(Exp_Informer, self).__init__(args)
@@ -107,16 +108,25 @@ class Exp_Informer(Exp_Basic):
         return model_optim
     
     def _select_criterion(self):
-        criterion =  nn.MSELoss()
+        #criterion =  nn.MSELoss()
+        criterion = nn.MSELoss(reduce=False)
+        # weighted MSE: no mean operation, return every element of minibatch
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
         self.model.eval()
         total_loss = []
-        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(vali_loader):
+        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark,class_label) in enumerate(vali_loader):
             pred, true = self._process_one_batch(
                 vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
-            loss = criterion(pred.detach().cpu(), true.detach().cpu())
+            loss = criterion(pred.detach().cpu(), true.detach().cpu()) # to cpu due to no need to update parameter in validation
+            # weighted MSE loss
+            loss = loss.mean(dim=1)
+            loss = loss.mean(dim=1)
+            weight= class_label.to(torch.device('cpu'))
+            weighted_loss=weight*loss
+            loss=weighted_loss.mean()
+
             total_loss.append(loss)
         total_loss = np.average(total_loss)
         self.model.train()
@@ -148,13 +158,20 @@ class Exp_Informer(Exp_Basic):
             
             self.model.train()
             epoch_time = time.time()
-            for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(train_loader):
+            for i, (batch_x,batch_y,batch_x_mark,batch_y_mark,class_label) in enumerate(train_loader):
                 iter_count += 1
                 
                 model_optim.zero_grad()
                 pred, true = self._process_one_batch(
                     train_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
                 loss = criterion(pred, true)
+                # weighted MSE loss
+                loss = loss.mean(dim=1)
+                loss = loss.mean(dim=1)
+                weight = class_label.to(torch.device('cuda:0'))
+                weighted_loss = weight * loss
+                loss = weighted_loss.mean()
+
                 train_loss.append(loss.item())
                 
                 if (i+1) % 100==0:
@@ -200,7 +217,7 @@ class Exp_Informer(Exp_Basic):
         preds = []
         trues = []
         
-        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(test_loader):
+        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark,class_label) in enumerate(test_loader):
             pred, true = self._process_one_batch(
                 test_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             preds.append(pred.detach().cpu().numpy())
@@ -239,7 +256,7 @@ class Exp_Informer(Exp_Basic):
         
         preds = []
         
-        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(pred_loader):
+        for i, (batch_x,batch_y,batch_x_mark,batch_y_mark,class_label) in enumerate(pred_loader):
             pred, true = self._process_one_batch(
                 pred_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
             preds.append(pred.detach().cpu().numpy())
