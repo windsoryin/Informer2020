@@ -44,10 +44,10 @@ class EarlyStopping:
     def save_checkpoint(self, val_loss, model, path):
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        if self.args.use_multi_gpu:
-            print('save model with dataparellel')
-            torch.save(model.module.state_dict(), path + '/' + 'checkpoint.pth') # 去除因并行运行，模型保存的module前缀
-        else:
+        # if self.args.use_multi_gpu:
+        #     print('save model with dataparellel')
+        #     torch.save(model.module.state_dict(), path + '/' + 'checkpoint.pth') # 去除因并行运行，模型保存的module前缀
+        # else:
             torch.save(model.state_dict(), path+'/'+'checkpoint.pth')
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
