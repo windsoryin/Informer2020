@@ -249,8 +249,18 @@ class Exp_Informer(Exp_Basic):
         
         if load:
             path = os.path.join(self.args.checkpoints, setting)
-            best_model_path = path+'/'+'checkpoint.pth'
-            self.model.load_state_dict(torch.load(best_model_path))
+            best_model_path = path + '/' + 'checkpoint.pth'
+            best_checkpoint = torch.load(best_model_path)
+            flag = 0 # 判断是否包含module（模型是否并行生成的）
+            for (k, v) in best_checkpoint.items():
+                if k.startswith('module'):
+                    flag = 1
+                    break
+            if flag == 1:
+                self.model = nn.DataParallel(self.model) # load model without error
+                best_checkpoint = torch.load(best_model_path)
+            # self.model.load_state_dict({k.replace('module.',''):v for k,v in best_checkpoint.items()})
+            self.model.load_state_dict(best_checkpoint)
 
         self.model.eval()
         
