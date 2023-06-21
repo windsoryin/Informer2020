@@ -16,6 +16,8 @@ import os
 import time
 
 import warnings
+from loss.dilate_loss import dilate_loss
+
 warnings.filterwarnings('ignore')
 
 
@@ -119,13 +121,34 @@ class Exp_Informer(Exp_Basic):
         for i, (batch_x,batch_y,batch_x_mark,batch_y_mark,class_label) in enumerate(vali_loader):
             pred, true = self._process_one_batch(
                 vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
-            loss = criterion(pred.detach().cpu(), true.detach().cpu()) # to cpu due to no need to update parameter in validation
-            # weighted MSE loss
-            loss = loss.mean(dim=1)
-            loss = loss.mean(dim=1)
-            weight= class_label.to(torch.device('cpu'))
-            weighted_loss=weight*loss
-            loss=weighted_loss.mean()
+            loss_type = 'dilate'
+            if (loss_type == 'mse'):
+                loss = criterion(pred.detach().cpu(),
+                                 true.detach().cpu())  # to cpu due to no need to update parameter in validation
+                loss = loss.mean(dim=1)
+                loss = loss.mean(dim=1)
+                # weighted MSE loss
+                weight = class_label.to(torch.device('cpu'))
+                weighted_loss = weight * loss
+                loss = weighted_loss.mean()
+            if (loss_type == 'dilate'):
+                alpha = 0.5
+                gamma = 0.001
+                size_pred = pred.shape
+                for loss_i in range(size_pred[0]):
+                    tmp_loss, loss_shape, loss_temporal = dilate_loss(
+                        pred[loss_i].reshape(1, size_pred[1], size_pred[2]).detach().cpu(),
+                        true[loss_i].reshape(1, size_pred[1], size_pred[2]).detach().cpu(), alpha, gamma, torch.device('cpu'))
+                    tmp_loss = tmp_loss.unsqueeze(0)
+                    if loss_i == 0:
+                        loss = tmp_loss
+                    else:
+                        loss = torch.cat((loss, tmp_loss))
+                # weighted DILATE loss
+                weight = class_label.to(torch.device('cpu'))
+                # weight=torch.ones(size_pred[0]).to(self.device)
+                weighted_loss = weight * loss
+                loss = weighted_loss.mean()
 
             total_loss.append(loss)
         total_loss = np.average(total_loss)
@@ -164,13 +187,33 @@ class Exp_Informer(Exp_Basic):
                 model_optim.zero_grad()
                 pred, true = self._process_one_batch(
                     train_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
-                loss = criterion(pred, true)
-                # weighted MSE loss
-                loss = loss.mean(dim=1)
-                loss = loss.mean(dim=1)
-                weight = class_label.to(torch.device('cuda:0'))
-                weighted_loss = weight * loss
-                loss = weighted_loss.mean()
+
+                loss_type = 'dilate'
+                if (loss_type == 'mse'):
+                    loss = criterion(pred, true)
+                    loss = loss.mean(dim=1)
+                    loss = loss.mean(dim=1)
+                    # weighted MSE loss
+                    weight = class_label.to(self.device)
+                    weighted_loss = weight * loss
+                    loss = weighted_loss.mean()
+                if (loss_type == 'dilate'):
+                    alpha = 0.5
+                    gamma = 0.001
+                    size_pred = pred.shape
+                    for loss_i in range(size_pred[0]):
+                        tmp_loss, loss_shape, loss_temporal = dilate_loss(pred[loss_i].reshape(1,size_pred[1],size_pred[2]), true[loss_i].reshape(1,size_pred[1],size_pred[2]), alpha, gamma, self.device)
+                        tmp_loss = tmp_loss.unsqueeze(0)
+                        if loss_i == 0:
+                            loss = tmp_loss
+                        else:
+                            loss = torch.cat((loss, tmp_loss))
+                    # weighted DILATE loss
+                    weight = class_label.to(self.device)
+                    #weight=torch.ones(size_pred[0]).to(self.device)
+                    weighted_loss = weight * loss
+                    loss = weighted_loss.mean()
+                #tmp_loss2, loss_shape, loss_temporal = dilate_loss(pred,true,alpha, gamma, self.device)
 
                 train_loss.append(loss.item())
                 
